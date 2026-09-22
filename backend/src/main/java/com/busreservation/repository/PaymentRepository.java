@@ -1,0 +1,12 @@
+package com.busreservation.repository;
+
+import com.busreservation.entity.Payment;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
+
+public interface PaymentRepository extends JpaRepository<Payment, Long> {
+    Optional<Payment> findByBookingId(Long bookingId);
+    Optional<Payment> findByGroupRef(String groupRef);
+    Optional<Payment> findByTransactionRef(String transactionRef);
+}

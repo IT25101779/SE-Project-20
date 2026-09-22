@@ -1,0 +1,106 @@
+spring:
+  application:
+    name: bus-reservation-system
+
+  profiles:
+    active: sqlserver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: true
+    # NOTE: open-in-view is ON (Spring Boot's own default) rather than the more
+    # "architecturally strict" false. With it off, several entities (Schedule,
+    # Booking, Payment, Route) have lazy-loaded relationships (bus, route,
+    # stops, passenger...) that are only read while building the JSON
+    # response - turning it off caused exactly the "no Session" error seen
+    # when searching schedules. Turning it on trades a very slightly longer
+    # per-request DB connection hold for not having to hand-write a DTO for
+    # every single read endpoint - a reasonable trade for a project this size.
+    defer-datasource-initialization: true
+
+  sql:
+    init:
+      mode: always
+
+---
+# ---------------------------------------------------------------------------
+# DEV PROFILE (default): in-memory H2 database.
+# No installation needed - run the app and it just works.
+# H2 console available at http://localhost:8080/h2-console (JDBC URL below)
+# ---------------------------------------------------------------------------
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:h2:mem:busreservation;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+
+---
+# ---------------------------------------------------------------------------
+# MYSQL PROFILE: use for a persistent local/production database.
+# Run with: mvn spring-boot:run -Dspring-boot.run.profiles=mysql
+# Create the schema first: CREATE DATABASE busreservation;
+# ---------------------------------------------------------------------------
+spring:
+  config:
+    activate:
+      on-profile: mysql
+  datasource:
+    url: jdbc:sqlserver://localhost:1433;databaseName=busreservation;integratedSecurity=true;encrypt=true;trustServerCertificate=true
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+  jpa:
+    database-platform: org.hibernate.dialect.SQLServerDialect
+
+---
+# ---------------------------------------------------------------------------
+# SQL SERVER PROFILE: SQL Server Management Studio.
+# Uses SQL Server Authentication (sa account) - no native DLL required.
+# Run with: mvn spring-boot:run  (this is now the default profile)
+#
+# SETUP (one time):
+# 1. In SSMS right-click server → Properties → Security → "SQL Server and
+#    Windows Authentication mode" → OK
+# 2. Security → Logins → sa → Properties: set password, Status: Enabled
+# 3. Restart SQL Server service
+# 4. Create the database: CREATE DATABASE busreservation;
+# ---------------------------------------------------------------------------
+spring:
+  config:
+    activate:
+      on-profile: sqlserver
+  datasource:
+    url: jdbc:sqlserver://localhost:1433;databaseName=busreservation;trustServerCertificate=true;encrypt=false
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    username: sa
+    password: Admin@1234
+  jpa:
+    database-platform: org.hibernate.dialect.SQLServerDialect
+    hibernate:
+      ddl-auto: update
+
+---
+server:
+  port: 8080
+
+app:
+  jwt:
+    # IMPORTANT: change this secret before any real deployment. Base64-encoded, 256-bit minimum.
+    secret: "cGxlYXNlLWNoYW5nZS10aGlzLXNlY3JldC1iZWZvcmUtcHJvZHVjdGlvbi11c2Utb25seS1mb3ItZGVtbw=="
+    expiration-ms: 86400000 # 24 hours
+  security:
+    max-failed-logins: 5
+    lockout-minutes: 15
+  simulation:
+    gps-tick-seconds: 5
+    payment-gateway-delay-ms: 800
